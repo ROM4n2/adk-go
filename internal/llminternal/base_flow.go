@@ -641,13 +641,13 @@ func (f *Flow) RunLive(ctx agent.InvocationContext) (agent.LiveSession, iter.Seq
 			}()
 
 			// pendingSend holds a function response awaiting delivery to the
-			// model. It is written by the sender goroutine through sess.inputCh,
-			// the same queue user input uses and the only writer on the live
-			// connection, never by this loop: gorilla/websocket allows one
-			// concurrent writer, and a direct write here races the sender's
-			// writes and panics (#1819). The value survives a reconnect, so a
-			// response produced while the connection was down is delivered on
-			// the next one instead of being dropped with the socket.
+			// model, queued on sess.inputCh so the sender goroutine is the
+			// connection's only writer; a direct write from this loop races
+			// it and panics (#1819). It is declared inside the per-connection
+			// loop, so a response pending when the connection drops is
+			// discarded with the socket: carrying one across needs the value
+			// to survive until the write is confirmed, which stays open on
+			// #1819.
 			var pendingSend *genai.Content
 
 			reconnect := false

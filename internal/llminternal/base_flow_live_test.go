@@ -721,8 +721,13 @@ func TestRunLiveToolResponseSharesSenderGoroutine(t *testing.T) {
 	}
 
 	cancel()
-	for _, err := range seq {
-		_ = err // drain to the iterator's end after cancel
+	// Pull to exhaustion through next(): seq is already owned by Pull2, and
+	// ranging it here would drive the same iterator from a second goroutine,
+	// which never finishes and parks RunLive's goroutines for the leak assert.
+	for {
+		if _, _, ok := next(); !ok {
+			break
+		}
 	}
 
 	mu.Lock()
